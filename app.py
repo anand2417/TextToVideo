@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     asyncio.run(generate_audio(response, SAMPLE_FILE_NAME))
 
-    timed_captions = generate_timed_captions("SAMPLE_FILE_NAME")
+    timed_captions = generate_timed_captions(SAMPLE_FILE_NAME)
     
 
     print(timed_captions)
