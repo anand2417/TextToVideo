@@ -37,10 +37,10 @@ def generate_script(topic):
 
     You are now tasked with generating an engaging video idea based on the requested type of content. Focus on making the concept visually captivating, professional, and appealing to a broad audience.
 
-    Strictly output the concept in a JSON format with the key 'video_idea', like this:
+    Stictly output the script in a JSON format like below, and only provide a parsable JSON object with the key 'script'.
 
-    # Output
-    {"video_idea": "Here is the idea ..."}
+     # Output
+        {"script": "Here is the script ..."}
     """
 )
 
