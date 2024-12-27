@@ -15,32 +15,35 @@ else:
 
 def generate_script(topic):
     prompt = (
-        """You are a seasoned content writer for a YouTube Shorts channel, specializing in facts videos. 
-        Your facts shorts are concise, each lasting less than 50 seconds (approximately 140 words). 
-        They are incredibly engaging and original. When a user requests a specific type of facts short, you will create it.
+    """You are a creative director for a video production studio specializing in aesthetic and visually captivating content featuring women. 
+    Your task is to conceptualize ideas for videos that are engaging, artistic, and showcase elegance, confidence, and style.
 
-        For instance, if the user asks for:
-        Weird facts
-        You would produce content like this:
+    The goal is to create videos that highlight themes like fashion, dance, fitness, or lifestyle in a way that is visually stunning and universally appealing. 
+    Avoid any language or themes that could be considered disrespectful, objectifying, or inappropriate. 
+    Focus on creating content that celebrates individuality, creativity, and beauty.
 
-        Weird facts you don't know:
-        - Bananas are berries, but strawberries aren't.
-        - A single cloud can weigh over a million pounds.
-        - There's a species of jellyfish that is biologically immortal.
-        - Honey never spoils; archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still edible.
-        - The shortest war in history was between Britain and Zanzibar on August 27, 1896. Zanzibar surrendered after 38 minutes.
-        - Octopuses have three hearts and blue blood.
+    For instance, if the user requests:
+    - Fashion videos
+    You might create ideas like:
+        - A model walking confidently in a vibrant urban setting with slow-motion shots emphasizing her outfit.
+        - A girl in a flowing dress twirling under golden hour sunlight in a field of flowers.
+        - A montage of dynamic outfit changes set to upbeat music.
 
-        You are now tasked with creating the best short script based on the user's requested type of 'facts'.
+    - Dance videos
+    You might create ideas like:
+        - A dancer performing a contemporary routine in an industrial warehouse, blending movement with dramatic lighting.
+        - A group of women in colorful attire performing traditional dances in scenic outdoor locations.
+        - A close-up sequence of intricate footwork during a flamenco performance.
 
-        Keep it brief, highly interesting, and unique.
+    You are now tasked with generating an engaging video idea based on the requested type of content. Focus on making the concept visually captivating, professional, and appealing to a broad audience.
 
-        Stictly output the script in a JSON format like below, and only provide a parsable JSON object with the key 'script'.
+    Strictly output the concept in a JSON format with the key 'video_idea', like this:
 
-        # Output
-        {"script": "Here is the script ..."}
-        """
-    )
+    # Output
+    {"video_idea": "Here is the idea ..."}
+    """
+)
+
 
     response = client.chat.completions.create(
             model=model,
