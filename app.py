@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     SAMPLE_TOPIC = args.topic
-    SAMPLE_FILE_NAME = "C:\\Users\\anand\\Text-To-Video-AI-main\\Text-To-Video-AI-main\\audio_tts.wav"
+    SAMPLE_FILE_NAME = "audio_tts.wav"
     VIDEO_SERVER = "pexel"
 
     response = generate_script(SAMPLE_TOPIC)
@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     asyncio.run(generate_audio(response, SAMPLE_FILE_NAME))
 
-    timed_captions = generate_timed_captions("C:\\Users\\anand\\Text-To-Video-AI-main\\Text-To-Video-AI-main\\audio_tts.wav")
+    timed_captions = generate_timed_captions("SAMPLE_FILE_NAME")
     
 
     print(timed_captions)
