@@ -20,7 +20,6 @@ log_directory = ".logs/gpt_logs"
 
 prompt = """# Instructions
 
-# Instructions
 
 Given the following short story and its segments, extract three visually concrete and specific keywords for each time segment that can be used to search for relevant background visuals. The keywords should be short and capture the main essence of the sentence or the described scene. They can be synonyms or related terms. If a segment is vague or general, consider the next segment for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a segment contains two or more important pieces of information, divide it into shorter segments with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the story. Each keyword should cover between 2-4 seconds. The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...].
 
