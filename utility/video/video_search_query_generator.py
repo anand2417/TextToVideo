@@ -20,22 +20,27 @@ log_directory = ".logs/gpt_logs"
 
 prompt = """# Instructions
 
-Given the following video script and timed captions, extract three visually concrete and specific keywords for each time segment that can be used to search for background videos. The keywords should be short and capture the main essence of the sentence. They can be synonyms or related terms. If a caption is vague or general, consider the next timed caption for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a time frame contains two or more important pieces of information, divide it into shorter time frames with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the video. Each keyword should cover between 2-4 seconds. The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...]. Please handle all edge cases, such as overlapping time segments, vague or general captions, and single-word keywords.
+# Instructions
 
+Given the following short story and its segments, extract three visually concrete and specific keywords for each time segment that can be used to search for relevant background visuals. The keywords should be short and capture the main essence of the sentence or the described scene. They can be synonyms or related terms. If a segment is vague or general, consider the next segment for more context. If a keyword is a single word, try to return a two-word keyword that is visually concrete. If a segment contains two or more important pieces of information, divide it into shorter segments with one keyword each. Ensure that the time periods are strictly consecutive and cover the entire length of the story. Each keyword should cover between 2-4 seconds. The output should be in JSON format, like this: [[[t1, t2], ["keyword1", "keyword2", "keyword3"]], [[t2, t3], ["keyword4", "keyword5", "keyword6"]], ...].
+
+For example, if the story describes:  
+- "A woman in a red bikini investigates a secret hidden within an abandoned seaside resort," the keywords should include 'red bikini,' 'seaside resort,' and 'mystery search.'
+- "A dancer in shimmering attire captivates a crowd while planning her escape," the keywords should include 'shimmering dancer,' 'captivated audience,' and 'secret escape.'
 
 Important Guidelines:
-
-Use only English in your text queries.
-Each search string must depict something visual.
-The depictions have to be extremely visually concrete, like rainy street, or cat sleeping.
-'emotional moment' <= BAD, because it doesn't depict something visually.
-'crying child' <= GOOD, because it depicts something visual.
-The list must always contain the most relevant and appropriate query searches.
-['Car', 'Car driving', 'Car racing', 'Car parked'] <= BAD, because it's 4 strings.
-['Fast car'] <= GOOD, because it's 1 string.
-['Un chien', 'une voiture rapide', 'une maison rouge'] <= BAD, because the text query is NOT in English.
+- Use only English in your text queries.
+- Each search string must depict something visual.
+- The depictions have to be extremely visually concrete, like 'rainy street' or 'cat sleeping.'
+- 'emotional moment' <= BAD, because it doesn't depict something visually.
+- 'crying child' <= GOOD, because it depicts something visual.
+- The list must always contain the most relevant and appropriate query searches.
+- ['Car,' 'Car driving,' 'Car racing,' 'Car parked'] <= BAD, because it's 4 strings.
+- ['Fast car'] <= GOOD, because it's 1 string.
+- ['Un chien,' 'une voiture rapide,' 'une maison rouge'] <= BAD, because the text query is NOT in English.
 
 Note: Your response should be the response only and no extra text or data.
+
   """
 
 def fix_json(json_str):
