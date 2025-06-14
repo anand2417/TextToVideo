@@ -77,6 +77,30 @@ def fix_json(json_str: str) -> str:
     
     return json_str
 
+def call_OpenAI(script, captions_timed):
+    """
+    Makes a request to the configured LLM (OpenAI or Groq) to get video search queries.
+    """
+    # Format the user content for the LLM
+    user_content = f"Script: {script}\nTimed Captions:{''.join(map(str, captions_timed))}"
+    print("Content being sent to LLM:", user_content)
+
+    response = client.chat.completions.create(
+        model=model,
+        temperature=1, # Controls randomness; 1 is typical, higher for more creativity
+        messages=[
+            {"role": "system", "content": prompt}, # System role for instructions
+            {"role": "user", "content": user_content} # User role for the specific request
+        ]
+    )
+
+    # Extract and clean the LLM's response
+    text = response.choices[0].message.content.strip()
+    text = re.sub(r'\s+', ' ', text) # Replace multiple spaces with a single space
+    print("Text response from LLM:", text)
+    log_response(LOG_TYPE_GPT, script, text) # Log the response for debugging/monitoring
+    return text
+
 def getVideoSearchQueriesTimed(script, captions_timed):
     """
     Calls the LLM to get a list of [[t0, t1], [kw1, kw2, kw3]] segments,
