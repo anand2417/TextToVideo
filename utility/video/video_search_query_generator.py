@@ -84,7 +84,9 @@ def getVideoSearchQueriesTimed(script, captions_timed):
             print("Content before fixing: \n", content_raw, "\n\n")
             print(f"Error details: {e}")
             content_fixed = fix_json(content_raw.replace("```json", "").replace("```", ""))
-            out = json.loads(content_fixed) # Attempt to parse the fixed content
+            i=input()
+            out = json.loads(i)
+            #out = json.loads(content_fixed) # Attempt to parse the fixed content
 
         # Basic validation: ensure the parsed 'out' is a list and contains the expected structure
         # This helps catch cases where the LLM might return an unexpected format
