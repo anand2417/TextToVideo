@@ -43,78 +43,73 @@ Note: Your response should be the response only and no extra text or data.
 
 """
 
-def fix_json(json_str):
-    # Normalize quotes
-    json_str = json_str.replace("“", '"').replace("”", '"') \
-                       .replace("‘", "'").replace("’", "'")
-    # Remove trailing commas before ] or }
-    json_str = re.sub(r',(\s*[\]\}])', r'\1', json_str)
-    # Collapse duplicate separators
+def fix_json(json_str: str) -> str:
+    """
+    Normalize quotes, remove stray commas/brackets, escape inner quotes,
+    and auto‑close unmatched brackets.
+    """
+    # 1) Normalize all fancy quotes to plain
+    json_str = (json_str
+        .replace("“", '"').replace("”", '"')
+        .replace("‘", "'").replace("’", "'"))
+    
+    # 2) Remove markdown fences
+    json_str = json_str.replace("```json", "").replace("```", "")
+    
+    # 3) Remove trailing commas before ] or }
+    json_str = re.sub(r',\s*([\]\}])', r'\1', json_str)
+    
+    # 4) Escape any unescaped double‑quotes inside array elements
+    #    e.g. ["he said "hello"", ...] → ["he said \"hello\"", ...]
+    def escape_inner_quotes(match):
+        inner = match.group(1)
+        return '"' + inner.replace('"', r'\"') + '"'
+    json_str = re.sub(r'"([^"\[\]]*?)"', escape_inner_quotes, json_str)
+    
+    # 5) Collapse duplicate separators like "] , ["
     json_str = re.sub(r'\]\s*,\s*\[', '],[', json_str)
-    # Auto‑close unmatched brackets
+    
+    # 6) Auto‑close unmatched brackets
     opens = json_str.count('[')
     closes = json_str.count(']')
     if closes < opens:
         json_str += ']' * (opens - closes)
+    
     return json_str
 
 def getVideoSearchQueriesTimed(script, captions_timed):
     """
-    Generates timed video search queries by calling an LLM.
-    Always returns a list of [ [t_start, t_end], [keyword1,keyword2,keyword3] ] segments.
+    Calls the LLM to get a list of [[t0, t1], [kw1, kw2, kw3]] segments,
+    then cleans and parses the JSON robustly.
     """
     try:
-        # 1) Raw response
+        # 1) Get raw text from LLM
         content_raw = call_OpenAI(script, captions_timed)
 
-        # 2) Strip any markdown/code fences
-        content_clean = content_raw.replace("```json", "") \
-                                   .replace("```", "") \
-                                   .strip()
+        # 2) Clean up and fix JSON
+        cleaned = fix_json(content_raw)
+        
+        # 3) Parse it
+        segments = json.loads(cleaned)
 
-        # 3) Fix common JSON issues
-        content_fixed = fix_json(content_clean)
-
-        # 4) Parse into Python
-        out = json.loads(content_fixed)
-
-        # 5) Validate structure
-        if not isinstance(out, list) or not all(
-            isinstance(item, list) and 
-            len(item) == 2 and 
-            isinstance(item[0], list) and len(item[0]) == 2 and 
-            isinstance(item[1], list)
-            for item in out
-        ):
-            print("WARNING: Parsed JSON does not match expected structure. Returning empty list.")
+        # 4) Basic structure validation
+        if (not isinstance(segments, list) or
+            not all(isinstance(seg, list) and len(seg) == 2 and
+                    isinstance(seg[0], list) and len(seg[0]) == 2 and
+                    isinstance(seg[1], list)
+                    for seg in segments)):
+            print("WARNING: Parsed JSON has wrong structure; returning empty list.")
             return []
 
-        return out
+        return segments
 
     except json.JSONDecodeError as e:
-        print("JSON parsing failed even after fix:", e)
+        print("JSON parsing still failed after fix:", e)
+        print("Cleaned JSON was:", cleaned[:200], "…")
         return []
     except Exception as e:
-        print("Error in getVideoSearchQueriesTimed:", e)
+        print("Unexpected error in getVideoSearchQueriesTimed:", e)
         return []
-
-def call_OpenAI(script, captions_timed):
-    user_content = f"Script: {script}\nTimed Captions:{''.join(map(str, captions_timed))}"
-    print("Content being sent to LLM:", user_content)
-    response = client.chat.completions.create(
-        model=model,
-        temperature=1,
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_content}
-        ]
-    )
-    text = response.choices[0].message.content.strip()
-    # Collapse whitespace
-    text = re.sub(r'\s+', ' ', text)
-    print("Text response from LLM:", text)
-    log_response(LOG_TYPE_GPT, script, text)
-    return text
 
 def merge_empty_intervals(segments):
     """
