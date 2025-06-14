@@ -43,42 +43,51 @@ Note: Your response should be the response only and no extra text or data.
 
 """
 
-def fix_json(json_str: str) -> str:
-    """
-    Normalize quotes, remove stray commas/brackets, escape inner quotes,
-    auto-close unmatched brackets and fix missing closing quotes.
-    """
-    # 1) Normalize all fancy quotes to plain
-    json_str = (json_str
-        .replace("“", '"').replace("”", '"')
-        .replace("‘", "'").replace("’", "'"))
-    
-    # 2) Remove markdown fences
-    json_str = json_str.replace("```json", "").replace("```", "")
-    
-    # 3) Remove trailing commas before ] or }
-    json_str = re.sub(r',\s*([\]\}])', r'\1', json_str)
-    
-    # 4) Escape any unescaped double‑quotes inside array elements
-    def escape_inner_quotes(match):
-        inner = match.group(1)
-        return '"' + inner.replace('"', r'\"') + '"'
-    json_str = re.sub(r'"([^"\[\]]*?)"', escape_inner_quotes, json_str)
-    
-    # 4.1) Fix any unclosed string immediately before ] or }
-    #    e.g. ['open cockpit},  → ['open cockpit"], 
-    json_str = re.sub(r'([^\"])([^\"]+?)([\}\]])', r'\1"\2"\3', json_str)
-    
-    # 5) Collapse duplicate separators like "] , ["
-    json_str = re.sub(r'\]\s*,\s*\[', '],[', json_str)
-    
-    # 6) Auto‑close unmatched brackets
-    opens = json_str.count('[')
-    closes = json_str.count(']')
-    if closes < opens:
-        json_str += ']' * (opens - closes)
-    
+def fix_json(json_str):
+    # This function attempts to clean up common JSON formatting issues from LLM output.
+    json_str = json_str.replace("’", "'").replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")
+    # A specific fix for double quotes within a string that might not be correctly escaped
+    json_str = json_str.replace('"you didn"t"', '"you didn\'t"')
     return json_str
+
+def getVideoSearchQueriesTimed(script, captions_timed):
+    """
+    Generates timed video search queries by calling an LLM.
+    Ensures the output is always a list of segments, even on error.
+    """
+    try:
+        # Call the LLM to get the complete set of timed video search queries
+        content_raw = call_OpenAI(script, captions_timed)
+
+        out = [] # Initialize 'out' as an empty list
+
+        # Attempt to parse the JSON response from the LLM
+        try:
+            out = json.loads(content_raw)
+        except json.JSONDecodeError as e:
+            # If initial parsing fails, try to fix the JSON string and parse again
+            print("Initial JSON parsing failed. Attempting to fix...")
+            print("Content before fixing: \n", content_raw, "\n\n")
+            print(f"Error details: {e}")
+            content_fixed = fix_json(content_raw.replace("```json", "").replace("```", ""))
+            out = json.loads(content_fixed) # Attempt to parse the fixed content
+
+        # Basic validation: ensure the parsed 'out' is a list and contains the expected structure
+        # This helps catch cases where the LLM might return an unexpected format
+        if not isinstance(out, list) or \
+           not all(isinstance(item, list) and len(item) == 2 and \
+                   isinstance(item[0], list) and len(item[0]) == 2 and \
+                   isinstance(item[1], list) for item in out):
+            print("WARNING: Parsed JSON does not match expected structure. Returning empty list.")
+            return []
+
+        return out
+
+    except Exception as e:
+        # Catch any other unexpected errors during the process
+        print(f"Error in getVideoSearchQueriesTimed: {e}")
+        # Crucially, always return an empty list on error to prevent 'NoneType' issues downstream.
+        return []
 
 def call_OpenAI(script, captions_timed):
     """
@@ -103,40 +112,6 @@ def call_OpenAI(script, captions_timed):
     print("Text response from LLM:", text)
     log_response(LOG_TYPE_GPT, script, text) # Log the response for debugging/monitoring
     return text
-
-def getVideoSearchQueriesTimed(script, captions_timed):
-    """
-    Calls the LLM to get a list of [[t0, t1], [kw1, kw2, kw3]] segments,
-    then cleans and parses the JSON robustly.
-    """
-    try:
-        # 1) Get raw text from LLM
-        content_raw = call_OpenAI(script, captions_timed)
-
-        # 2) Clean up and fix JSON
-        cleaned = fix_json(content_raw)
-        
-        # 3) Parse it
-        segments = json.loads(cleaned)
-
-        # 4) Basic structure validation
-        if (not isinstance(segments, list) or
-            not all(isinstance(seg, list) and len(seg) == 2 and
-                    isinstance(seg[0], list) and len(seg[0]) == 2 and
-                    isinstance(seg[1], list)
-                    for seg in segments)):
-            print("WARNING: Parsed JSON has wrong structure; returning empty list.")
-            return []
-
-        return segments
-
-    except json.JSONDecodeError as e:
-        print("JSON parsing still failed after fix:", e)
-        print("Cleaned JSON was:", cleaned[:200], "…")
-        return []
-    except Exception as e:
-        print("Unexpected error in getVideoSearchQueriesTimed:", e)
-        return []
 
 def merge_empty_intervals(segments):
     """
