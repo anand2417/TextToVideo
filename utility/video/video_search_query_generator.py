@@ -44,73 +44,76 @@ Note: Your response should be the response only and no extra text or data.
 """
 
 def fix_json(json_str):
-    # This function attempts to clean up common JSON formatting issues from LLM output.
-    json_str = json_str.replace("’", "'").replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")
-    # A specific fix for double quotes within a string that might not be correctly escaped
-    json_str = json_str.replace('"you didn"t"', '"you didn\'t"')
+    # Normalize quotes
+    json_str = json_str.replace("“", '"').replace("”", '"') \
+                       .replace("‘", "'").replace("’", "'")
+    # Remove trailing commas before ] or }
+    json_str = re.sub(r',(\s*[\]\}])', r'\1', json_str)
+    # Collapse duplicate separators
+    json_str = re.sub(r'\]\s*,\s*\[', '],[', json_str)
+    # Auto‑close unmatched brackets
+    opens = json_str.count('[')
+    closes = json_str.count(']')
+    if closes < opens:
+        json_str += ']' * (opens - closes)
     return json_str
 
 def getVideoSearchQueriesTimed(script, captions_timed):
     """
     Generates timed video search queries by calling an LLM.
-    Ensures the output is always a list of segments, even on error.
+    Always returns a list of [ [t_start, t_end], [keyword1,keyword2,keyword3] ] segments.
     """
     try:
-        # Call the LLM to get the complete set of timed video search queries
+        # 1) Raw response
         content_raw = call_OpenAI(script, captions_timed)
 
-        out = [] # Initialize 'out' as an empty list
+        # 2) Strip any markdown/code fences
+        content_clean = content_raw.replace("```json", "") \
+                                   .replace("```", "") \
+                                   .strip()
 
-        # Attempt to parse the JSON response from the LLM
-        try:
-            out = json.loads(content_raw)
-        except json.JSONDecodeError as e:
-            # If initial parsing fails, try to fix the JSON string and parse again
-            print("Initial JSON parsing failed. Attempting to fix...")
-            print("Content before fixing: \n", content_raw, "\n\n")
-            print(f"Error details: {e}")
-            content_fixed = fix_json(content_raw.replace("```json", "").replace("```", ""))
-            out = json.loads(content_fixed) # Attempt to parse the fixed content
+        # 3) Fix common JSON issues
+        content_fixed = fix_json(content_clean)
 
-        # Basic validation: ensure the parsed 'out' is a list and contains the expected structure
-        # This helps catch cases where the LLM might return an unexpected format
-        if not isinstance(out, list) or \
-           not all(isinstance(item, list) and len(item) == 2 and \
-                   isinstance(item[0], list) and len(item[0]) == 2 and \
-                   isinstance(item[1], list) for item in out):
+        # 4) Parse into Python
+        out = json.loads(content_fixed)
+
+        # 5) Validate structure
+        if not isinstance(out, list) or not all(
+            isinstance(item, list) and 
+            len(item) == 2 and 
+            isinstance(item[0], list) and len(item[0]) == 2 and 
+            isinstance(item[1], list)
+            for item in out
+        ):
             print("WARNING: Parsed JSON does not match expected structure. Returning empty list.")
             return []
 
         return out
 
+    except json.JSONDecodeError as e:
+        print("JSON parsing failed even after fix:", e)
+        return []
     except Exception as e:
-        # Catch any other unexpected errors during the process
-        print(f"Error in getVideoSearchQueriesTimed: {e}")
-        # Crucially, always return an empty list on error to prevent 'NoneType' issues downstream.
+        print("Error in getVideoSearchQueriesTimed:", e)
         return []
 
 def call_OpenAI(script, captions_timed):
-    """
-    Makes a request to the configured LLM (OpenAI or Groq) to get video search queries.
-    """
-    # Format the user content for the LLM
     user_content = f"Script: {script}\nTimed Captions:{''.join(map(str, captions_timed))}"
     print("Content being sent to LLM:", user_content)
-
     response = client.chat.completions.create(
         model=model,
-        temperature=1, # Controls randomness; 1 is typical, higher for more creativity
+        temperature=1,
         messages=[
-            {"role": "system", "content": prompt}, # System role for instructions
-            {"role": "user", "content": user_content} # User role for the specific request
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_content}
         ]
     )
-
-    # Extract and clean the LLM's response
     text = response.choices[0].message.content.strip()
-    text = re.sub(r'\s+', ' ', text) # Replace multiple spaces with a single space
+    # Collapse whitespace
+    text = re.sub(r'\s+', ' ', text)
     print("Text response from LLM:", text)
-    log_response(LOG_TYPE_GPT, script, text) # Log the response for debugging/monitoring
+    log_response(LOG_TYPE_GPT, script, text)
     return text
 
 def merge_empty_intervals(segments):
