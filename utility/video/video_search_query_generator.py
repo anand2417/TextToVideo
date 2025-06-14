@@ -44,10 +44,24 @@ Note: Your response should be the response only and no extra text or data.
 """
 
 def fix_json(json_str):
-    # This function attempts to clean up common JSON formatting issues from LLM output.
+    # Replace smart quotes with standard quotes
     json_str = json_str.replace("’", "'").replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")
-    # A specific fix for double quotes within a string that might not be correctly escaped
+    
+    # Fix common apostrophe escape problem
     json_str = json_str.replace('"you didn"t"', '"you didn\'t"')
+
+    # Fix patterns like ["text]] --> ["text"]]
+    json_str = re.sub(r'\["([^"\]]+)\]\]', r'["\1"]]', json_str)
+
+    # Fix missing closing quote before ] if any
+    json_str = re.sub(r'\["([^"\]]+)\]', r'["\1"]', json_str)
+
+    # Remove extra closing brackets (e.g., ]]]])
+    json_str = re.sub(r'\]{3,}', ']]', json_str)
+
+    # Optional: remove trailing commas (which can cause json.loads to fail)
+    json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
+
     return json_str
 
 def getVideoSearchQueriesTimed(script, captions_timed):
