@@ -46,7 +46,7 @@ Note: Your response should be the response only and no extra text or data.
 def fix_json(json_str: str) -> str:
     """
     Normalize quotes, remove stray commas/brackets, escape inner quotes,
-    and auto‑close unmatched brackets.
+    auto-close unmatched brackets and fix missing closing quotes.
     """
     # 1) Normalize all fancy quotes to plain
     json_str = (json_str
@@ -60,11 +60,14 @@ def fix_json(json_str: str) -> str:
     json_str = re.sub(r',\s*([\]\}])', r'\1', json_str)
     
     # 4) Escape any unescaped double‑quotes inside array elements
-    #    e.g. ["he said "hello"", ...] → ["he said \"hello\"", ...]
     def escape_inner_quotes(match):
         inner = match.group(1)
         return '"' + inner.replace('"', r'\"') + '"'
     json_str = re.sub(r'"([^"\[\]]*?)"', escape_inner_quotes, json_str)
+    
+    # 4.1) Fix any unclosed string immediately before ] or }
+    #    e.g. ['open cockpit},  → ['open cockpit"], 
+    json_str = re.sub(r'([^\"])([^\"]+?)([\}\]])', r'\1"\2"\3', json_str)
     
     # 5) Collapse duplicate separators like "] , ["
     json_str = re.sub(r'\]\s*,\s*\[', '],[', json_str)
